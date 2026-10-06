@@ -1,26 +1,261 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+:root{
+  --doan:#087f5b;
+  --doan-dark:#04563f;
+  --doan-deep:#023c2d;
+  --doan-light:#e7f4ee;
+  --gold:#e4bd45;
+  --red:#c52232;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*{box-sizing:border-box}
+html,body{margin:0;background:#f5f5ef;color:#123b30;font-family:Arial,sans-serif}
+button,input,select{font:inherit}
+
+.ld-app{min-height:100vh}
+
+.ld-header{
+  height:68px;background:#fff;display:flex;align-items:center;
+  padding:0 22px;gap:24px;position:relative;z-index:20;
+  border-bottom:1px solid #dfe6e1;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.ld-brand{display:flex;align-items:center;gap:10px;color:var(--doan)}
+.ld-logo{
+  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  background:var(--doan);color:white;font-weight:900;
+}
+.ld-brand strong,.ld-brand small{display:block}
+.ld-brand strong{letter-spacing:2px;font-size:15px}
+.ld-brand small{font-size:8px;letter-spacing:1.3px;margin-top:3px}
+
+.ld-search{
+  margin-left:auto;width:min(440px,45vw);height:40px;
+  background:#f3f7f4;border:1px solid #dbe6df;border-radius:22px;
+  display:flex;align-items:center;padding:0 15px;color:var(--doan);
+}
+.ld-search input{
+  flex:1;border:0;outline:0;background:transparent;
+  margin-left:8px;color:#31584c;
+}
+.ld-admin{
+  border:1px solid var(--doan);background:#fff;color:var(--doan);
+  border-radius:20px;padding:8px 15px;font-size:10px;font-weight:700;
+}
+
+.ld-map-wrap{
+  height:calc(100vh - 68px);min-height:580px;
+  position:relative;overflow:hidden;
+}
+.ld-map{position:absolute;inset:0}
+
+.ld-map-caption{
+  position:absolute;left:25px;top:25px;
+  padding:18px 22px;background:#ffffffe8;
+  backdrop-filter:blur(14px);border-radius:18px;
+  box-shadow:0 10px 35px #063c3020;pointer-events:none;
+}
+.ld-map-caption small{
+  color:var(--doan);font-size:9px;font-weight:800;letter-spacing:2px;
+}
+.ld-map-caption h1{
+  margin:7px 0 0;font:normal 34px/1.02 Georgia,serif;
+  color:var(--doan-deep);
+}
+.ld-map-caption em{color:var(--doan);font-style:italic}
+
+.ld-area-box{
+  position:absolute;right:22px;top:22px;background:white;
+  border-radius:15px;padding:10px 13px;box-shadow:0 8px 25px #063c3020;
+}
+.ld-area-box span{display:block;font-size:8px;letter-spacing:1.5px;color:#71847b;margin-bottom:4px}
+.ld-area-box select{border:0;outline:0;color:var(--doan);font-weight:700;background:white}
+
+.ld-map-tools{
+  position:absolute;right:22px;bottom:24px;display:flex;flex-direction:column;
+  background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 8px 25px #063c3025;
+}
+.ld-map-tools button{
+  width:40px;height:40px;border:0;border-bottom:1px solid #e6ebe7;
+  background:#fff;color:var(--doan);font-size:20px;
+}
+.ld-map-tools button:last-child{border:0;font-size:17px}
+
+.ld-place-marker{
+  width:28px;height:34px;border:0;background:transparent;
+  position:relative;cursor:pointer;
+}
+.ld-place-marker span{
+  position:absolute;left:4px;bottom:7px;width:20px;height:20px;
+  background:var(--red);border:3px solid white;border-radius:50%;
+  box-shadow:0 3px 12px #0006,0 0 0 7px #c5223230;
+  animation:ld-pulse 1.8s infinite;
+}
+.ld-place-marker:after{
+  content:"";position:absolute;left:10px;bottom:1px;
+  width:9px;height:9px;background:var(--red);
+  transform:rotate(45deg);z-index:-1;
+}
+@keyframes ld-pulse{
+  50%{transform:scale(1.13);box-shadow:0 3px 12px #0006,0 0 0 13px #c5223210}
+}
+
+.ld-explore{padding:55px 5vw 90px;background:#f5f5ef}
+.ld-heading{display:flex;justify-content:space-between;align-items:end}
+.ld-heading small{font-size:9px;letter-spacing:2px;color:var(--doan);font-weight:800}
+.ld-heading h2{margin:7px 0 0;font:normal 38px Georgia,serif;color:var(--doan-deep)}
+.ld-heading p{font-size:12px;line-height:1.6;color:#65776f}
+
+.ld-filters{display:flex;gap:8px;overflow:auto;padding:25px 0 20px}
+.ld-filters button{
+  white-space:nowrap;border:1px solid #d5e0da;background:white;
+  border-radius:22px;padding:10px 17px;color:#466359;
+}
+.ld-filters .active{background:var(--doan);color:white;border-color:var(--doan)}
+
+.ld-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ld-card{
+  background:white;border-radius:18px;overflow:hidden;
+  box-shadow:0 5px 25px #123b3010;transition:.25s;cursor:pointer;
+}
+.ld-card:hover{transform:translateY(-5px);box-shadow:0 18px 40px #123b3020}
+.ld-card img{width:100%;height:185px;object-fit:cover}
+.ld-card>div{padding:15px}
+.ld-card small{font-size:9px;color:var(--doan);letter-spacing:.8px}
+.ld-card h3{font:normal 22px Georgia,serif;color:var(--doan-deep);margin:7px 0}
+.ld-card p{font-size:12px;line-height:1.5;color:#697871;min-height:36px}
+.ld-card b{font-size:9px;color:var(--doan);letter-spacing:1px}
+
+.ld-place-sheet{
+  position:fixed;z-index:100;right:20px;bottom:20px;width:370px;
+  background:white;border-radius:22px;overflow:hidden;
+  box-shadow:0 20px 60px #003c3040;
+  animation:ld-up .3s ease;
+}
+.ld-place-sheet>img{width:100%;height:175px;object-fit:cover}
+.ld-place-sheet>div{padding:17px}
+.ld-place-sheet small{font-size:9px;color:var(--doan);letter-spacing:1px}
+.ld-place-sheet h2{font:normal 28px Georgia,serif;color:var(--doan-deep);margin:6px 0}
+.ld-place-sheet p{font-size:13px;color:#697871;line-height:1.5}
+.ld-close{
+  position:absolute;right:10px;top:10px;width:31px;height:31px;
+  border:0;border-radius:50%;background:white;color:#345;font-size:20px;
+}
+.ld-actions{display:flex;gap:6px}
+.ld-actions button{
+  flex:1;padding:9px 4px;border:1px solid #d5e0da;
+  border-radius:9px;background:white;color:var(--doan);
+  font-size:8px;font-weight:800;
+}
+.ld-actions button:first-child{background:var(--doan);color:white}
+@keyframes ld-up{from{opacity:0;transform:translateY(25px)}to{opacity:1;transform:none}}
+
+@media(max-width:800px){
+  .ld-header{height:60px;padding:0 12px}
+  .ld-brand small,.ld-admin{display:none}
+  .ld-search{margin-left:auto;width:42px;padding:0 12px;overflow:hidden}
+  .ld-search input{display:none}
+  .ld-map-wrap{height:calc(100svh - 60px);min-height:500px}
+  .ld-map-caption{left:12px;top:12px;padding:12px 15px}
+  .ld-map-caption h1{font-size:25px}
+  .ld-area-box{left:12px;right:12px;top:auto;bottom:18px;padding:12px}
+  .ld-area-box select{width:100%}
+  .ld-map-tools{right:12px;bottom:75px}
+  .ld-explore{padding:38px 14px 90px}
+  .ld-heading{display:block}
+  .ld-heading h2{font-size:31px}
+  .ld-heading p{display:none}
+  .ld-cards{display:flex;overflow:auto}
+  .ld-card{min-width:280px}
+  .ld-card img{height:155px}
+  .ld-place-sheet{left:10px;right:10px;bottom:10px;width:auto}
+  .ld-place-sheet>img{height:135px}
+}
+/* =========================
+   LÂM ĐỒNG - LEAFLET
+   ========================= */
+
+   .lamdong-tooltip {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #168052;
+    border-radius: 6px;
+    color: #14532d;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 7px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
+  
+  .lamdong-tooltip::before {
+    border-top-color: #168052;
+  }
+  /* =========================================================
+   LÂM ĐỒNG – BẢN GIAO HƯỞNG XANH
+   Global UI
+   ========================================================= */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7f3;
 }
+
+/* MapLibre */
+
+.maplibregl-map {
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+}
+
+.maplibregl-ctrl-group {
+  border: 1px solid #d8e6dc !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow:
+    0 6px 24px rgba(25, 65, 43, 0.12) !important;
+}
+
+.maplibregl-ctrl-group button {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+.maplibregl-popup-content {
+  padding: 10px !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 10px 35px rgba(25, 65, 43, 0.16) !important;
+}
+
+.maplibregl-popup-close-button {
+  color: #648073;
+  font-size: 18px;
+  padding: 5px 8px;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: white !important;
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+  .maplibregl-ctrl-top-right {
+    top: 72px !important;
+    right: 12px !important;
+  }
+
+  .maplibregl-ctrl-group button {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}
+  
