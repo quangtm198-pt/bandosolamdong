@@ -102,7 +102,8 @@ const INITIAL_ZOOM = 7.65;
 
 /* =========================================================
    ĐỊA DANH DEMO
-   Sau này thay bằng dữ liệu từ Admin / Supabase.
+   Tạm thời giữ để kiểm tra giao diện.
+   Sau này thay bằng Admin / Supabase.
 ========================================================= */
 
 const DEMO_PLACES: DemoPlace[] = [
@@ -197,6 +198,23 @@ function buildWardColorExpression(
   }
 
   expression.push("#DDEBDD");
+
+  return expression as maplibregl.ExpressionSpecification;
+}
+
+function buildOutsideProvinceColorExpression(): maplibregl.ExpressionSpecification {
+  const expression: unknown[] = [
+    "match",
+    ["get", "name"],
+  ];
+
+  for (const [name, color] of Object.entries(
+    OUTSIDE_COLORS
+  )) {
+    expression.push(name, color);
+  }
+
+  expression.push("#edf1ee");
 
   return expression as maplibregl.ExpressionSpecification;
 }
@@ -354,127 +372,78 @@ export default function LamDongMap() {
     markerElement.style.display =
       "block";
 
-    /* =====================================================
-       VÒNG TRÒN CHUYỂN ĐỘNG
-    ===================================================== */
-
     const pulse =
       document.createElement("span");
 
     pulse.style.position =
       "absolute";
-
     pulse.style.left = "50%";
-
     pulse.style.bottom = "1px";
-
     pulse.style.width = "9px";
-
     pulse.style.height = "9px";
-
     pulse.style.border =
       "2px solid rgba(220,38,38,.55)";
-
     pulse.style.borderRadius =
       "50%";
-
     pulse.style.background =
       "rgba(220,38,38,.08)";
-
     pulse.style.transform =
       "translateX(-50%) scale(.65)";
-
     pulse.style.animation =
       "lamdongPlacePulse 1.8s ease-out infinite";
-
     pulse.style.pointerEvents =
       "none";
-
-    /* =====================================================
-       TÂM ĐỊNH VỊ
-    ===================================================== */
 
     const point =
       document.createElement("span");
 
     point.style.position =
       "absolute";
-
     point.style.left = "50%";
-
     point.style.bottom = "3px";
-
     point.style.width = "4px";
-
     point.style.height = "4px";
-
     point.style.marginLeft = "-2px";
-
-    point.style.borderRadius = "50%";
-
+    point.style.borderRadius =
+      "50%";
     point.style.background =
       "#dc2626";
-
     point.style.pointerEvents =
       "none";
-
-    /* =====================================================
-       PIN
-    ===================================================== */
 
     const pin =
       document.createElement("span");
 
     pin.style.position =
       "absolute";
-
     pin.style.left = "50%";
-
     pin.style.top = "0";
-
     pin.style.width = "20px";
-
     pin.style.height = "20px";
-
     pin.style.background =
       "#dc2626";
-
     pin.style.borderRadius =
       "50% 50% 50% 0";
-
     pin.style.transform =
       "translateX(-50%) rotate(-45deg)";
-
     pin.style.boxShadow =
       "0 3px 7px rgba(127,29,29,.3)";
-
     pin.style.animation =
       "lamdongPlaceFloat 2.4s ease-in-out infinite";
-
-    /* =====================================================
-       CHẤM TRẮNG
-    ===================================================== */
 
     const dot =
       document.createElement("span");
 
     dot.style.position =
       "absolute";
-
     dot.style.left = "6px";
-
     dot.style.top = "6px";
-
     dot.style.width = "8px";
-
     dot.style.height = "8px";
-
     dot.style.borderRadius =
       "50%";
-
     dot.style.background =
       "#ffffff";
-
     dot.style.transform =
       "rotate(45deg)";
 
@@ -492,10 +461,6 @@ export default function LamDongMap() {
       pin
     );
 
-    /* =====================================================
-       CLICK MARKER
-    ===================================================== */
-
     markerElement.addEventListener(
       "click",
       (event) => {
@@ -507,8 +472,6 @@ export default function LamDongMap() {
 
         if (!map) return;
 
-        /* Đóng popup cũ */
-
         if (popupRef.current) {
           popupRef.current.remove();
           popupRef.current = null;
@@ -516,59 +479,27 @@ export default function LamDongMap() {
 
         setActivePlace(place);
 
-        /*
-         * =================================================
-         * ĐƯA ĐỊA DANH VÀO GIỮA BẢN ĐỒ
-         *
-         * Không setCenter tức thời.
-         * Dùng flyTo để chuyển động mượt.
-         * =================================================
-         */
-
-        const targetZoom =
-          Math.max(
-            map.getZoom(),
-            12.8
-          );
-
         map.flyTo({
           center: [
             place.lng,
             place.lat,
           ],
-
-          zoom: targetZoom,
-
+          zoom: 13.2,
           duration: 850,
-
           essential: true,
         });
-
-        /* =================================================
-           POPUP
-        ================================================= */
 
         const popup =
           new maplibregl.Popup({
             anchor: "bottom",
-
             offset: 10,
-
             closeButton: true,
-
             closeOnClick: false,
-
             maxWidth: "280px",
-
             className:
               "lamdong-place-popup",
-
             focusAfterOpen: false,
           });
-
-        /* =================================================
-           ROOT
-        ================================================= */
 
         const root =
           document.createElement("div");
@@ -580,10 +511,6 @@ export default function LamDongMap() {
 
         root.style.fontFamily =
           "inherit";
-
-        /* =================================================
-           ẢNH
-        ================================================= */
 
         if (place.image) {
           const imageWrap =
@@ -663,10 +590,6 @@ export default function LamDongMap() {
           );
         }
 
-        /* =================================================
-           LOẠI
-        ================================================= */
-
         const type =
           document.createElement("div");
 
@@ -692,10 +615,6 @@ export default function LamDongMap() {
           "3px";
 
         root.appendChild(type);
-
-        /* =================================================
-           TÊN
-        ================================================= */
 
         const title =
           document.createElement("div");
@@ -723,10 +642,6 @@ export default function LamDongMap() {
 
         root.appendChild(title);
 
-        /* =================================================
-           MÔ TẢ
-        ================================================= */
-
         const summary =
           document.createElement("div");
 
@@ -746,10 +661,6 @@ export default function LamDongMap() {
           "6px";
 
         root.appendChild(summary);
-
-        /* =================================================
-           ĐỊA CHỈ
-        ================================================= */
 
         const address =
           document.createElement("div");
@@ -792,11 +703,9 @@ export default function LamDongMap() {
           addressText
         );
 
-        root.appendChild(address);
-
-        /* =================================================
-           ACTIONS
-        ================================================= */
+        root.appendChild(
+          address
+        );
 
         const actions =
           document.createElement("div");
@@ -818,8 +727,6 @@ export default function LamDongMap() {
 
         actions.style.paddingTop =
           "6px";
-
-        /* Google Maps */
 
         const directions =
           document.createElement("a");
@@ -847,8 +754,6 @@ export default function LamDongMap() {
 
         directions.style.textDecoration =
           "none";
-
-        /* Chi tiết */
 
         const detailButton =
           document.createElement("button");
@@ -913,11 +818,9 @@ export default function LamDongMap() {
           detailButton
         );
 
-        root.appendChild(actions);
-
-        /* =================================================
-           GẮN POPUP ĐÚNG TỌA ĐỘ ĐỊA DANH
-        ================================================= */
+        root.appendChild(
+          actions
+        );
 
         popup
           .setLngLat([
@@ -1415,16 +1318,13 @@ export default function LamDongMap() {
                   data:
                     wardData as any,
                 },
-
-                surroundingWards: {
-                  type: "geojson",
-
-                  data:
-                    "/data/provinces/surrounding-wards.geojson",
-                },
               },
 
               layers: [
+                /* =========================================
+                   NỀN
+                ========================================= */
+
                 {
                   id: "background",
 
@@ -1435,6 +1335,10 @@ export default function LamDongMap() {
                       "#eef3ef",
                   },
                 },
+
+                /* =========================================
+                   CÁC TỈNH NGOÀI LÂM ĐỒNG
+                ========================================= */
 
                 {
                   id: "outside-provinces-fill",
@@ -1451,14 +1355,8 @@ export default function LamDongMap() {
                   ],
 
                   paint: {
-                    "fill-color": [
-                      "match",
-                      ["get", "name"],
-                      ...Object.entries(
-                        OUTSIDE_COLORS
-                      ).flat(),
-                      "#edf1ee",
-                    ],
+                    "fill-color":
+                      buildOutsideProvinceColorExpression(),
 
                     "fill-opacity":
                       0.88,
@@ -1556,130 +1454,9 @@ export default function LamDongMap() {
                   },
                 },
 
-                {
-                  id: "surrounding-wards-fill",
-
-                  type: "fill",
-
-                  source:
-                    "surroundingWards",
-
-                  filter: [
-                    "!=",
-                    ["get", "isLamDong"],
-                    true,
-                  ],
-
-                  paint: {
-                    "fill-color":
-                      "#f5f6f3",
-
-                    "fill-opacity":
-                      0.18,
-                  },
-
-                  minzoom: 8.2,
-                },
-
-                {
-                  id: "surrounding-wards-border",
-
-                  type: "line",
-
-                  source:
-                    "surroundingWards",
-
-                  filter: [
-                    "!=",
-                    ["get", "isLamDong"],
-                    true,
-                  ],
-
-                  paint: {
-                    "line-color":
-                      "#b9c4bd",
-
-                    "line-width": [
-                      "interpolate",
-                      ["linear"],
-                      ["zoom"],
-                      8,
-                      0.25,
-                      9,
-                      0.55,
-                      11,
-                      0.9,
-                      13,
-                      1.2,
-                    ],
-
-                    "line-opacity":
-                      0.65,
-                  },
-
-                  minzoom: 8,
-                },
-
-                {
-                  id: "surrounding-wards-labels",
-
-                  type: "symbol",
-
-                  source:
-                    "surroundingWards",
-
-                  filter: [
-                    "!=",
-                    ["get", "isLamDong"],
-                    true,
-                  ],
-
-                  layout: {
-                    "text-field": [
-                      "get",
-                      "name",
-                    ],
-
-                    "text-size": [
-                      "interpolate",
-                      ["linear"],
-                      ["zoom"],
-                      9,
-                      8,
-                      10,
-                      9,
-                      11,
-                      10,
-                      13,
-                      12,
-                    ],
-
-                    "text-anchor":
-                      "center",
-
-                    "text-allow-overlap":
-                      false,
-
-                    "text-ignore-placement":
-                      true,
-                  },
-
-                  paint: {
-                    "text-color":
-                      "#78857e",
-
-                    "text-halo-color":
-                      "#ffffff",
-
-                    "text-halo-width":
-                      1.2,
-
-                    "text-halo-blur":
-                      0.2,
-                  },
-
-                  minzoom: 9,
-                },
+                /* =========================================
+                   124 XÃ / PHƯỜNG / ĐẶC KHU LÂM ĐỒNG
+                ========================================= */
 
                 {
                   id: "lamdong-fill",
@@ -1791,6 +1568,10 @@ export default function LamDongMap() {
                   minzoom: 7.5,
                 },
 
+                /* =========================================
+                   HOVER
+                ========================================= */
+
                 {
                   id: "lamdong-hover",
 
@@ -1845,6 +1626,10 @@ export default function LamDongMap() {
                     "",
                   ],
                 },
+
+                /* =========================================
+                   SELECTED
+                ========================================= */
 
                 {
                   id: "lamdong-selected",
@@ -1924,8 +1709,6 @@ export default function LamDongMap() {
               "LÂM ĐỒNG MAP: OK"
             );
 
-            /* Hover */
-
             map.on(
               "mousemove",
               "lamdong-fill",
@@ -1987,8 +1770,6 @@ export default function LamDongMap() {
                 }
               }
             );
-
-            /* Click xã */
 
             map.on(
               "click",
@@ -2087,10 +1868,6 @@ export default function LamDongMap() {
 
       <style jsx global>{`
 
-        /* =================================================
-           MARKER
-        ================================================= */
-
         @keyframes lamdongPlaceFloat {
           0%,
           100% {
@@ -2101,10 +1878,6 @@ export default function LamDongMap() {
             margin-top: -2px;
           }
         }
-
-        /* =================================================
-           VÒNG TRÒN ĐỊNH VỊ
-        ================================================= */
 
         @keyframes lamdongPlacePulse {
           0% {
@@ -2131,10 +1904,6 @@ export default function LamDongMap() {
             opacity: 0;
           }
         }
-
-        /* =================================================
-           POPUP
-        ================================================= */
 
         .lamdong-place-popup
           .maplibregl-popup-content {
@@ -2211,10 +1980,6 @@ export default function LamDongMap() {
             #173c29;
         }
 
-        /* =================================================
-           MOBILE
-        ================================================= */
-
         @media (max-width: 640px) {
 
           .lamdong-place-popup
@@ -2234,10 +1999,6 @@ export default function LamDongMap() {
 
       `}</style>
 
-      {/* ===================================================
-          DANH SÁCH 124 ĐƠN VỊ
-      =================================================== */}
-
       <div className="absolute left-1 top-1 z-30">
 
         <button
@@ -2253,16 +2014,13 @@ export default function LamDongMap() {
           }}
           className="group flex items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-2.5 py-2 text-sm font-semibold text-[#28543b] shadow-[0_10px_35px_rgba(25,65,43,0.16)] backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-white"
         >
-
           <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e5f3e8]">
-
             <span className="absolute inset-0 animate-ping rounded-full bg-[#7fbe91]/30" />
 
             <List
               size={10}
               className="relative z-10 text-[#28724b]"
             />
-
           </span>
 
           <span className="whitespace-nowrap">
@@ -2280,7 +2038,6 @@ export default function LamDongMap() {
               className="animate-bounce text-[#28724b]"
             />
           )}
-
         </button>
 
         {showList && (
@@ -2448,10 +2205,6 @@ export default function LamDongMap() {
 
       </div>
 
-      {/* ===================================================
-          XÃ ĐANG CHỌN
-      =================================================== */}
-
       {selected && (
         <div className="absolute bottom-4 left-3 z-20 max-w-[calc(100%-68px)]">
 
@@ -2496,18 +2249,10 @@ export default function LamDongMap() {
         </div>
       )}
 
-      {/* ===================================================
-          MAP
-      =================================================== */}
-
       <div
         ref={mapEl}
         className="h-full w-full"
       />
-
-      {/* ===================================================
-          NÚT ĐIỀU KHIỂN
-      =================================================== */}
 
       <div className="absolute right-3 top-3 z-40 sm:right-4 sm:top-4">
 
