@@ -70,6 +70,33 @@ type DemoPlace = {
   summary: string;
 };
 
+type DbPlace = {
+  id: string;
+  name: string;
+  slug: string | null;
+  place_type_id: string | null;
+  ward_id: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  short_description: string | null;
+  description: string | null;
+  cover_image: string | null;
+  vr360_url: string | null;
+  audio_url: string | null;
+  video_url: string | null;
+  historical_period: string | null;
+  recognition: string | null;
+  source: string | null;
+  is_published: boolean;
+  sort_order: number;
+};
+
+type DbPlaceType = {
+  id: string;
+  name: string;
+};
+
 /* =========================================================
    MÀU XÃ / PHƯỜNG / ĐẶC KHU
 ========================================================= */
@@ -113,6 +140,7 @@ const INITIAL_ZOOM = 7.65;
 
 /* =========================================================
    ĐỊA DANH DEMO
+   GiỮ NGUYÊN LÀM DỰ PHÒNG
 ========================================================= */
 
 const DEMO_PLACES: DemoPlace[] = [
@@ -278,6 +306,12 @@ export default function LamDongMap() {
   const dbWardsRef =
     useRef<DbWard[]>([]);
 
+  const dbPlacesRef =
+    useRef<DbPlace[]>([]);
+
+  const dbPlaceTypesRef =
+    useRef<DbPlaceType[]>([]);
+
   const selectedRef =
     useRef<SelectedWard | null>(null);
 
@@ -350,6 +384,68 @@ export default function LamDongMap() {
           block: "start",
         });
     }, 50);
+  }
+
+  /* =======================================================
+     CHUYỂN PLACE SUPABASE → FORMAT CŨ
+     Giữ nguyên toàn bộ popup/marker hiện tại
+  ======================================================= */
+
+  function convertDbPlace(
+    place: DbPlace
+  ): DemoPlace | null {
+    if (
+      place.latitude === null ||
+      place.longitude === null
+    ) {
+      return null;
+    }
+
+    const placeType =
+      dbPlaceTypesRef.current.find(
+        (type) =>
+          type.id ===
+          place.place_type_id
+      );
+
+    const googleMapsUrl =
+      `https://www.google.com/maps/dir/?api=1&destination=${place.latitude}%2C${place.longitude}`;
+
+    return {
+      id:
+        place.slug ||
+        place.id,
+
+      name: place.name,
+
+      type:
+        placeType?.name ||
+        "Địa danh",
+
+      wardKeyword:
+        "",
+
+      lng:
+        place.longitude,
+
+      lat:
+        place.latitude,
+
+      address:
+        place.address ||
+        "",
+
+      googleMapsUrl,
+
+      image:
+        place.cover_image ||
+        "",
+
+      summary:
+        place.short_description ||
+        place.description ||
+        "",
+    };
   }
 
   /* =======================================================
@@ -517,10 +613,8 @@ export default function LamDongMap() {
           document.createElement("div");
 
         root.style.width = "260px";
-
         root.style.maxWidth =
           "calc(100vw - 40px)";
-
         root.style.fontFamily =
           "inherit";
 
@@ -530,19 +624,14 @@ export default function LamDongMap() {
 
           imageWrap.style.width =
             "100%";
-
           imageWrap.style.height =
             "96px";
-
           imageWrap.style.borderRadius =
             "9px";
-
           imageWrap.style.overflow =
             "hidden";
-
           imageWrap.style.marginBottom =
             "8px";
-
           imageWrap.style.background =
             "#edf2ee";
 
@@ -560,13 +649,10 @@ export default function LamDongMap() {
 
           image.style.width =
             "100%";
-
           image.style.height =
             "100%";
-
           image.style.objectFit =
             "cover";
-
           image.style.display =
             "block";
 
@@ -852,10 +938,16 @@ export default function LamDongMap() {
 
   /* =======================================================
      HIỂN THỊ MARKER CỦA XÃ ĐANG CHỌN
+     
+     ƯU TIÊN:
+       Supabase places
+     
+     DỰ PHÒNG:
+       DEMO_PLACES
   ======================================================= */
 
   function showPlaceMarkers(
-    wardName: string
+    ward: SelectedWard
   ) {
     const map =
       mapRef.current;
@@ -864,18 +956,74 @@ export default function LamDongMap() {
 
     clearPlaceMarkers();
 
-    const normalizedWard =
-      normalizeText(wardName);
+    const dbPlaces =
+      ward.dbId
+        ? dbPlacesRef.current.filter(
+            (place) =>
+              place.ward_id ===
+              ward.dbId &&
+              place.is_published &&
+              place.latitude !== null &&
+              place.longitude !== null
+          )
+        : [];
 
-    const places =
+    const convertedDbPlaces =
+      dbPlaces
+        .map(convertDbPlace)
+        .filter(
+          (
+            place
+          ): place is DemoPlace =>
+            Boolean(place)
+        );
+
+    /*
+     * Giữ DEMO_PLACES làm dữ liệu dự phòng.
+     * Nếu Supabase đã có cùng địa danh thì không thêm bản demo trùng.
+     */
+    const dbNames =
+      new Set(
+        convertedDbPlaces.map(
+          (place) =>
+            normalizeText(
+              place.name
+            )
+        )
+      );
+
+    const demoPlaces =
       DEMO_PLACES.filter(
         (place) =>
-          normalizedWard.includes(
+          normalizeText(
+            ward.name
+          ).includes(
             normalizeText(
               place.wardKeyword
             )
+          ) &&
+          !dbNames.has(
+            normalizeText(
+              place.name
+            )
           )
       );
+
+    const places = [
+      ...convertedDbPlaces,
+      ...demoPlaces,
+    ];
+
+    console.log(
+      "📍 ĐỊA DANH ĐỊA BÀN:",
+      {
+        ward: ward.name,
+        wardId: ward.dbId,
+        supabase: convertedDbPlaces.length,
+        demo: demoPlaces.length,
+        total: places.length,
+      }
+    );
 
     places.forEach((place) => {
       const markerElement =
@@ -1150,12 +1298,9 @@ export default function LamDongMap() {
     map.flyTo({
       center:
         INITIAL_CENTER,
-
       zoom:
         INITIAL_ZOOM,
-
       duration: 850,
-
       essential: true,
     });
   }
@@ -1184,7 +1329,9 @@ export default function LamDongMap() {
            ↓
      wards.code
            ↓
-     wards.id (UUID)
+     wards.id
+           ↓
+     places.ward_id
   ======================================================= */
 
   function selectWard(
@@ -1214,10 +1361,6 @@ export default function LamDongMap() {
       ).trim();
 
     if (!name) return;
-
-    /* =====================================================
-       GHÉP GEOJSON ID → SUPABASE CODE
-    ===================================================== */
 
     const dbWard =
       dbWardsRef.current.find(
@@ -1300,7 +1443,7 @@ export default function LamDongMap() {
             ?.name === name
         ) {
           showPlaceMarkers(
-            name
+            selectedWard
           );
         }
       },
@@ -1368,6 +1511,82 @@ export default function LamDongMap() {
           );
         }
 
+        /* =================================================
+           TẢI LOẠI ĐỊA DANH
+        ================================================= */
+
+        const {
+          data: dbPlaceTypes,
+          error: dbPlaceTypesError,
+        } = await supabase
+          .from("place_types")
+          .select(
+            "id, name"
+          )
+          .eq(
+            "is_active",
+            true
+          )
+          .order(
+            "sort_order",
+            {
+              ascending: true,
+            }
+          );
+
+        if (dbPlaceTypesError) {
+          console.error(
+            "Lỗi tải place_types:",
+            dbPlaceTypesError
+          );
+        } else {
+          dbPlaceTypesRef.current =
+            dbPlaceTypes ?? [];
+
+          console.log(
+            "✅ Supabase place_types:",
+            dbPlaceTypes?.length
+          );
+        }
+
+        /* =================================================
+           TẢI ĐỊA DANH
+        ================================================= */
+
+        const {
+          data: dbPlaces,
+          error: dbPlacesError,
+        } = await supabase
+          .from("places")
+          .select(
+            "id,name,slug,place_type_id,ward_id,address,latitude,longitude,short_description,description,cover_image,vr360_url,audio_url,video_url,historical_period,recognition,source,is_published,sort_order"
+          )
+          .eq(
+            "is_published",
+            true
+          )
+          .order(
+            "sort_order",
+            {
+              ascending: true,
+            }
+          );
+
+        if (dbPlacesError) {
+          console.error(
+            "Lỗi tải places:",
+            dbPlacesError
+          );
+        } else {
+          dbPlacesRef.current =
+            dbPlaces ?? [];
+
+          console.log(
+            "✅ Supabase places:",
+            dbPlaces?.length
+          );
+        }
+
         if (cancelled) {
           return;
         }
@@ -1414,10 +1633,6 @@ export default function LamDongMap() {
               },
 
               layers: [
-                /* =========================================
-                   NỀN
-                ========================================= */
-
                 {
                   id: "background",
 
@@ -1428,10 +1643,6 @@ export default function LamDongMap() {
                       "#eef3ef",
                   },
                 },
-
-                /* =========================================
-                   CÁC TỈNH NGOÀI LÂM ĐỒNG
-                ========================================= */
 
                 {
                   id: "outside-provinces-fill",
@@ -1547,10 +1758,6 @@ export default function LamDongMap() {
                   },
                 },
 
-                /* =========================================
-                   124 XÃ / PHƯỜNG / ĐẶC KHU
-                ========================================= */
-
                 {
                   id: "lamdong-fill",
 
@@ -1661,10 +1868,6 @@ export default function LamDongMap() {
                   minzoom: 7.5,
                 },
 
-                /* =========================================
-                   HOVER
-                ========================================= */
-
                 {
                   id: "lamdong-hover",
 
@@ -1719,10 +1922,6 @@ export default function LamDongMap() {
                     "",
                   ],
                 },
-
-                /* =========================================
-                   SELECTED
-                ========================================= */
 
                 {
                   id: "lamdong-selected",
