@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   ChevronDown,
   ChevronUp,
@@ -22,6 +23,7 @@ maplibregl.setWorkerUrl(
 ========================================================= */
 
 type WardProperties = {
+  id?: string | number;
   name?: string;
   fullName?: string;
   province?: string;
@@ -41,9 +43,18 @@ type WardCollection = {
   features: WardFeature[];
 };
 
+type DbWard = {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+};
+
 type SelectedWard = {
   name: string;
   type: string;
+  code?: string;
+  dbId?: string;
 };
 
 type DemoPlace = {
@@ -102,8 +113,6 @@ const INITIAL_ZOOM = 7.65;
 
 /* =========================================================
    ĐỊA DANH DEMO
-   Tạm thời giữ để kiểm tra giao diện.
-   Sau này thay bằng Admin / Supabase.
 ========================================================= */
 
 const DEMO_PLACES: DemoPlace[] = [
@@ -265,6 +274,9 @@ export default function LamDongMap() {
 
   const wardsRef =
     useRef<WardFeature[]>([]);
+
+  const dbWardsRef =
+    useRef<DbWard[]>([]);
 
   const selectedRef =
     useRef<SelectedWard | null>(null);
@@ -1166,6 +1178,13 @@ export default function LamDongMap() {
 
   /* =======================================================
      CHỌN XÃ
+     
+     GeoJSON:
+       properties.id
+           ↓
+     wards.code
+           ↓
+     wards.id (UUID)
   ======================================================= */
 
   function selectWard(
@@ -1188,12 +1207,54 @@ export default function LamDongMap() {
           ?.type || ""
       ).trim();
 
+    const code =
+      String(
+        feature.properties
+          ?.id ?? ""
+      ).trim();
+
     if (!name) return;
+
+    /* =====================================================
+       GHÉP GEOJSON ID → SUPABASE CODE
+    ===================================================== */
+
+    const dbWard =
+      dbWardsRef.current.find(
+        (ward) =>
+          String(ward.code) ===
+          code
+      );
+
+    if (!dbWard) {
+      console.warn(
+        "⚠️ Không tìm thấy ward trong Supabase:",
+        {
+          geoJsonId: code,
+          geoJsonName: name,
+          geoJsonType: type,
+        }
+      );
+    } else {
+      console.log(
+        "✅ GHÉP ĐỊA BÀN:",
+        {
+          geoJsonId: code,
+          geoJsonName: name,
+          supabaseId: dbWard.id,
+          supabaseCode: dbWard.code,
+          supabaseName: dbWard.name,
+          supabaseType: dbWard.type,
+        }
+      );
+    }
 
     const selectedWard: SelectedWard =
       {
         name,
         type,
+        code,
+        dbId: dbWard?.id,
       };
 
     selectedRef.current =
@@ -1274,6 +1335,38 @@ export default function LamDongMap() {
 
         const wardData =
           (await response.json()) as WardCollection;
+
+        /* =================================================
+           TẢI 124 ĐỊA BÀN TỪ SUPABASE
+        ================================================= */
+
+        const {
+          data: dbWards,
+          error: dbWardsError,
+        } = await supabase
+          .from("wards")
+          .select(
+            "id, code, name, type"
+          )
+          .eq(
+            "province_code",
+            "68"
+          );
+
+        if (dbWardsError) {
+          console.error(
+            "Lỗi tải wards:",
+            dbWardsError
+          );
+        } else {
+          dbWardsRef.current =
+            dbWards ?? [];
+
+          console.log(
+            "✅ Supabase wards:",
+            dbWards?.length
+          );
+        }
 
         if (cancelled) {
           return;
@@ -1455,7 +1548,7 @@ export default function LamDongMap() {
                 },
 
                 /* =========================================
-                   124 XÃ / PHƯỜNG / ĐẶC KHU LÂM ĐỒNG
+                   124 XÃ / PHƯỜNG / ĐẶC KHU
                 ========================================= */
 
                 {
