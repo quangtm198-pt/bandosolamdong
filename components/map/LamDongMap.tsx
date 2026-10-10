@@ -52,13 +52,13 @@ type SelectedWard = {
   dbId?: string;
 };
 
-type DemoPlace = {
+type MapPlace = {
   id: string;
   name: string;
   type: string;
-  wardKeyword: string;
   lng: number;
   lat: number;
+  wardId: string | null;
   address: string;
   googleMapsUrl: string;
   image: string;
@@ -83,8 +83,8 @@ type DbPlace = {
   historical_period: string | null;
   recognition: string | null;
   source: string | null;
-  is_published: boolean;
   sort_order: number;
+  is_published: boolean;
 };
 
 type DbPlaceType = {
@@ -110,70 +110,49 @@ const OUTSIDE_COLORS: Record<string, string> = {
   "Quảng Ngãi": "#E7EDF4",
 };
 
-const INITIAL_CENTER: [number, number] = [108.02, 11.7];
-const INITIAL_ZOOM = 7.65;
-
-const DEMO_PLACES: DemoPlace[] = [
-  {
-    id: "ga-da-lat",
-    name: "Ga Đà Lạt",
-    type: "Địa chỉ đỏ · Di tích",
-    wardKeyword: "Xuân Hương",
-    lng: 108.4583,
-    lat: 11.9446,
-    address: "Quang Trung, phường Xuân Hương – Đà Lạt, tỉnh Lâm Đồng",
-    googleMapsUrl: "https://www.google.com/maps/dir/?api=1&destination=11.9446%2C108.4583",
-    image: "/places/ga-da-lat.jpg",
-    summary: "Công trình kiến trúc đường sắt nổi bật, gắn với lịch sử hình thành và phát triển của Đà Lạt.",
-  },
-  {
-    id: "dinh-3-da-lat",
-    name: "Dinh III Đà Lạt",
-    type: "Di tích lịch sử",
-    wardKeyword: "Xuân Hương",
-    lng: 108.42967,
-    lat: 11.93005,
-    address: "01 Triệu Việt Vương, phường Xuân Hương – Đà Lạt, tỉnh Lâm Đồng",
-    googleMapsUrl: "https://www.google.com/maps/dir/?api=1&destination=11.93005%2C108.42967",
-    image: "/places/dinh-3.jpg",
-    summary: "Công trình kiến trúc gắn với lịch sử Đà Lạt và một giai đoạn quan trọng của lịch sử Việt Nam.",
-  },
-];
-
-function normalizeText(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/đ/g, "d").trim();
-}
+const INITIAL_CENTER: [number, number] = [108.02, 11.65];
+const INITIAL_ZOOM = 7.6;
 
 function getColorIndex(name: string) {
   let hash = 0;
+
   for (let i = 0; i < name.length; i++) {
     hash = (hash << 5) - hash + name.charCodeAt(i);
     hash |= 0;
   }
+
   return Math.abs(hash) % PLACE_COLORS.length;
 }
 
-function buildWardColorExpression(features: WardFeature[]): maplibregl.ExpressionSpecification {
+function buildWardColorExpression(
+  features: WardFeature[],
+): maplibregl.ExpressionSpecification {
   const expression: unknown[] = ["match", ["get", "name"]];
   const used = new Set<string>();
 
   for (const feature of features) {
     const name = String(feature.properties?.name || "").trim();
+
     if (!name || used.has(name)) continue;
+
     used.add(name);
     expression.push(name, PLACE_COLORS[getColorIndex(name)]);
   }
 
   expression.push("#DDEBDD");
+
   return expression as maplibregl.ExpressionSpecification;
 }
 
 function buildOutsideProvinceColorExpression(): maplibregl.ExpressionSpecification {
   const expression: unknown[] = ["match", ["get", "name"]];
+
   for (const [name, color] of Object.entries(OUTSIDE_COLORS)) {
     expression.push(name, color);
   }
+
   expression.push("#edf1ee");
+
   return expression as maplibregl.ExpressionSpecification;
 }
 
@@ -183,14 +162,18 @@ function getBoundsForFeature(feature: WardFeature) {
 
   if (geometry.type === "Polygon") {
     for (const ring of geometry.coordinates) {
-      for (const point of ring) bounds.extend(point as [number, number]);
+      for (const point of ring) {
+        bounds.extend(point as [number, number]);
+      }
     }
   }
 
   if (geometry.type === "MultiPolygon") {
     for (const polygon of geometry.coordinates) {
       for (const ring of polygon) {
-        for (const point of ring) bounds.extend(point as [number, number]);
+        for (const point of ring) {
+          bounds.extend(point as [number, number]);
+        }
       }
     }
   }
@@ -214,26 +197,28 @@ export default function LamDongMap() {
   const [selected, setSelected] = useState<SelectedWard | null>(null);
   const [hoveredName, setHoveredName] = useState("");
   const [showList, setShowList] = useState(false);
-  const [activePlace, setActivePlace] = useState<DemoPlace | null>(null);
+  const [, setActivePlace] = useState<MapPlace | null>(null);
 
   function clearPlaceMarkers() {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
-    if (popupRef.current) {
-      popupRef.current.remove();
-      popupRef.current = null;
-    }
+    popupRef.current?.remove();
+    popupRef.current = null;
 
     setActivePlace(null);
   }
 
-  function openPlaceDetail(place: DemoPlace) {
+  function notifyPlaceSelected(place: MapPlace) {
     window.dispatchEvent(
       new CustomEvent("lamdong:place-selected", {
         detail: place,
-      })
+      }),
     );
+  }
+
+  function openPlaceDetail(place: MapPlace) {
+    notifyPlaceSelected(place);
 
     window.setTimeout(() => {
       document.getElementById("chi-tiet-dia-danh")?.scrollIntoView({
@@ -243,28 +228,134 @@ export default function LamDongMap() {
     }, 50);
   }
 
-  function convertDbPlace(place: DbPlace): DemoPlace | null {
-    if (place.latitude === null || place.longitude === null) return null;
+  function convertDbPlace(place: DbPlace): MapPlace | null {
+    if (
+      place.latitude === null ||
+      place.longitude === null ||
+      !Number.isFinite(place.latitude) ||
+      !Number.isFinite(place.longitude) ||
+      place.latitude < -90 ||
+      place.latitude > 90 ||
+      place.longitude < -180 ||
+      place.longitude > 180
+    ) {
+      return null;
+    }
 
     const placeType = dbPlaceTypesRef.current.find(
-      (type) => type.id === place.place_type_id
+      (type) => type.id === place.place_type_id,
     );
 
     return {
       id: place.slug || place.id,
       name: place.name,
-      type: placeType?.name || "Địa danh",
-      wardKeyword: "",
+      type: placeType?.name || "Địa chỉ đỏ",
       lng: place.longitude,
       lat: place.latitude,
+      wardId: place.ward_id,
       address: place.address || "",
-      googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${place.latitude}%2C${place.longitude}`,
+      googleMapsUrl:
+        `https://www.google.com/maps/dir/?api=1&destination=` +
+        `${place.latitude}%2C${place.longitude}`,
       image: place.cover_image || "",
       summary: place.short_description || place.description || "",
     };
   }
 
-  function createPlaceMarker(place: DemoPlace) {
+  function highlightHover(name: string) {
+    const map = mapRef.current;
+    if (!map?.getLayer("lamdong-hover")) return;
+
+    map.setFilter("lamdong-hover", ["==", ["get", "name"], name]);
+    map.setFilter("lamdong-hover-border", ["==", ["get", "name"], name]);
+  }
+
+  function clearHover() {
+    const map = mapRef.current;
+    if (!map?.getLayer("lamdong-hover")) return;
+
+    map.setFilter("lamdong-hover", ["==", ["get", "name"], ""]);
+    map.setFilter("lamdong-hover-border", ["==", ["get", "name"], ""]);
+  }
+
+  function highlightSelected(name: string) {
+    const map = mapRef.current;
+    if (!map?.getLayer("lamdong-selected")) return;
+
+    map.setFilter("lamdong-selected", ["==", ["get", "name"], name]);
+    map.setFilter("lamdong-selected-border", ["==", ["get", "name"], name]);
+  }
+
+  function clearSelected() {
+    const map = mapRef.current;
+    if (!map?.getLayer("lamdong-selected")) return;
+
+    map.setFilter("lamdong-selected", ["==", ["get", "name"], ""]);
+    map.setFilter("lamdong-selected-border", ["==", ["get", "name"], ""]);
+  }
+
+  // Chọn địa bàn theo ward_id của địa danh mà không xóa marker/popup hiện tại.
+  function selectWardFromPlace(place: MapPlace) {
+    if (!place.wardId) {
+      console.warn("Địa danh chưa được gắn xã/phường/đặc khu:", place.name);
+      return;
+    }
+
+    const dbWard = dbWardsRef.current.find(
+      (ward) => ward.id === place.wardId,
+    );
+
+    if (!dbWard) {
+      console.warn("Không tìm thấy địa bàn trong Supabase:", {
+        place: place.name,
+        wardId: place.wardId,
+      });
+      return;
+    }
+
+    const feature = wardsRef.current.find(
+      (ward) =>
+        String(ward.properties?.id ?? "").trim() ===
+        String(dbWard.code).trim(),
+    );
+
+    if (!feature) {
+      console.warn("Không tìm thấy địa bàn trong GeoJSON:", {
+        place: place.name,
+        wardCode: dbWard.code,
+        wardName: dbWard.name,
+      });
+      return;
+    }
+
+    const name = String(feature.properties?.name || "").trim();
+    const type = String(feature.properties?.type || dbWard.type || "").trim();
+
+    const selectedWard: SelectedWard = {
+      name,
+      type,
+      code: String(feature.properties?.id ?? ""),
+      dbId: dbWard.id,
+    };
+
+    selectedRef.current = selectedWard;
+    setSelected(selectedWard);
+    setHoveredName("");
+    clearHover();
+    highlightSelected(name);
+
+    setShowList(false);
+    setSearch("");
+
+    // Cập nhật nội dung địa bàn bên dưới bản đồ.
+    window.dispatchEvent(
+      new CustomEvent("lamdong:ward-selected", {
+        detail: selectedWard,
+      }),
+    );
+  }
+
+  function createPlaceMarker(place: MapPlace) {
     const markerElement = document.createElement("button");
     markerElement.type = "button";
     markerElement.title = place.name;
@@ -283,6 +374,7 @@ export default function LamDongMap() {
     });
 
     const pulse = document.createElement("span");
+
     Object.assign(pulse.style, {
       position: "absolute",
       left: "50%",
@@ -298,6 +390,7 @@ export default function LamDongMap() {
     });
 
     const point = document.createElement("span");
+
     Object.assign(point.style, {
       position: "absolute",
       left: "50%",
@@ -311,6 +404,7 @@ export default function LamDongMap() {
     });
 
     const pin = document.createElement("span");
+
     Object.assign(pin.style, {
       position: "absolute",
       left: "50%",
@@ -325,6 +419,7 @@ export default function LamDongMap() {
     });
 
     const dot = document.createElement("span");
+
     Object.assign(dot.style, {
       position: "absolute",
       left: "6px",
@@ -346,7 +441,12 @@ export default function LamDongMap() {
       const map = mapRef.current;
       if (!map) return;
 
-      popupRef.current?.remove();
+      // MỚI: tô sáng địa bàn chứa địa danh được nhấp.
+      selectWardFromPlace(place);
+
+      // MỚI: đồng bộ địa danh được chọn với phần nội dung bên dưới.
+      // Không tự cuộn trang để người dùng vẫn nhìn thấy bản đồ và popup.
+      notifyPlaceSelected(place);
       setActivePlace(place);
 
       map.flyTo({
@@ -355,6 +455,8 @@ export default function LamDongMap() {
         duration: 850,
         essential: true,
       });
+
+      popupRef.current?.remove();
 
       const popup = new maplibregl.Popup({
         anchor: "bottom",
@@ -373,6 +475,7 @@ export default function LamDongMap() {
 
       if (place.image) {
         const imageWrap = document.createElement("div");
+
         Object.assign(imageWrap.style, {
           width: "100%",
           height: "96px",
@@ -410,6 +513,7 @@ export default function LamDongMap() {
 
       const type = document.createElement("div");
       type.textContent = place.type;
+
       Object.assign(type.style, {
         fontSize: "8.5px",
         fontWeight: "800",
@@ -418,10 +522,12 @@ export default function LamDongMap() {
         color: "#dc2626",
         marginBottom: "3px",
       });
+
       root.appendChild(type);
 
       const title = document.createElement("div");
       title.textContent = place.name;
+
       Object.assign(title.style, {
         fontSize: "14px",
         lineHeight: "1.25",
@@ -430,19 +536,23 @@ export default function LamDongMap() {
         paddingRight: "18px",
         marginBottom: "5px",
       });
+
       root.appendChild(title);
 
       const summary = document.createElement("div");
       summary.textContent = place.summary;
+
       Object.assign(summary.style, {
         fontSize: "10.5px",
         lineHeight: "1.42",
         color: "#68776e",
         marginBottom: "6px",
       });
+
       root.appendChild(summary);
 
       const address = document.createElement("div");
+
       Object.assign(address.style, {
         fontSize: "10px",
         lineHeight: "1.4",
@@ -457,10 +567,12 @@ export default function LamDongMap() {
 
       const addressText = document.createElement("span");
       addressText.textContent = place.address;
+
       address.append(addressLabel, addressText);
       root.appendChild(address);
 
       const actions = document.createElement("div");
+
       Object.assign(actions.style, {
         display: "flex",
         alignItems: "center",
@@ -475,6 +587,7 @@ export default function LamDongMap() {
       directions.target = "_blank";
       directions.rel = "noopener noreferrer";
       directions.textContent = "↗ Đường đi";
+
       Object.assign(directions.style, {
         fontSize: "10.5px",
         fontWeight: "800",
@@ -485,6 +598,7 @@ export default function LamDongMap() {
       const detailButton = document.createElement("button");
       detailButton.type = "button";
       detailButton.textContent = "Xem chi tiết";
+
       Object.assign(detailButton.style, {
         border: "0",
         borderRadius: "7px",
@@ -518,45 +632,11 @@ export default function LamDongMap() {
     return markerElement;
   }
 
-  function showPlaceMarkers(ward: SelectedWard) {
+  function renderPlaceMarkers(places: MapPlace[]) {
     const map = mapRef.current;
     if (!map) return;
 
     clearPlaceMarkers();
-
-    const dbPlaces = ward.dbId
-      ? dbPlacesRef.current.filter(
-          (place) =>
-            place.ward_id === ward.dbId &&
-            place.is_published &&
-            place.latitude !== null &&
-            place.longitude !== null
-        )
-      : [];
-
-    const convertedDbPlaces = dbPlaces
-      .map(convertDbPlace)
-      .filter((place): place is DemoPlace => Boolean(place));
-
-    const dbNames = new Set(
-      convertedDbPlaces.map((place) => normalizeText(place.name))
-    );
-
-    const demoPlaces = DEMO_PLACES.filter(
-      (place) =>
-        normalizeText(ward.name).includes(normalizeText(place.wardKeyword)) &&
-        !dbNames.has(normalizeText(place.name))
-    );
-
-    const places = [...convertedDbPlaces, ...demoPlaces];
-
-    console.log("📍 ĐỊA DANH ĐỊA BÀN:", {
-      ward: ward.name,
-      wardId: ward.dbId,
-      supabase: convertedDbPlaces.length,
-      demo: demoPlaces.length,
-      total: places.length,
-    });
 
     places.forEach((place) => {
       const marker = new maplibregl.Marker({
@@ -568,6 +648,41 @@ export default function LamDongMap() {
 
       markersRef.current.push(marker);
     });
+
+    console.log("📍 Số marker đang hiển thị:", places.length);
+  }
+
+  function showAllPlaceMarkers() {
+    const places = dbPlacesRef.current
+      .filter((place) => place.is_published === true)
+      .map(convertDbPlace)
+      .filter((place): place is MapPlace => Boolean(place));
+
+    renderPlaceMarkers(places);
+  }
+
+  function showPlaceMarkers(ward: SelectedWard) {
+    const dbPlaces = ward.dbId
+      ? dbPlacesRef.current.filter(
+          (place) =>
+            place.is_published === true &&
+            place.ward_id === ward.dbId &&
+            place.latitude !== null &&
+            place.longitude !== null,
+        )
+      : [];
+
+    const places = dbPlaces
+      .map(convertDbPlace)
+      .filter((place): place is MapPlace => Boolean(place));
+
+    console.log("📍 ĐỊA DANH THEO ĐỊA BÀN:", {
+      ward: ward.name,
+      wardId: ward.dbId,
+      total: places.length,
+    });
+
+    renderPlaceMarkers(places);
   }
 
   const filteredWards = useMemo(() => {
@@ -579,7 +694,11 @@ export default function LamDongMap() {
       const fullName = String(ward.properties?.fullName || "").toLowerCase();
       const type = String(ward.properties?.type || "").toLowerCase();
 
-      return name.includes(keyword) || fullName.includes(keyword) || type.includes(keyword);
+      return (
+        name.includes(keyword) ||
+        fullName.includes(keyword) ||
+        type.includes(keyword)
+      );
     });
   }, [wards, search]);
 
@@ -601,39 +720,17 @@ export default function LamDongMap() {
     return groups;
   }, [filteredWards]);
 
-  function highlightHover(name: string) {
-    const map = mapRef.current;
-    if (!map?.getLayer("lamdong-hover")) return;
-
-    map.setFilter("lamdong-hover", ["==", ["get", "name"], name]);
-    map.setFilter("lamdong-hover-border", ["==", ["get", "name"], name]);
-  }
-
-  function clearHover() {
-    const map = mapRef.current;
-    if (!map?.getLayer("lamdong-hover")) return;
-
-    map.setFilter("lamdong-hover", ["==", ["get", "name"], ""]);
-    map.setFilter("lamdong-hover-border", ["==", ["get", "name"], ""]);
-  }
-
-  function highlightSelected(name: string) {
-    const map = mapRef.current;
-    if (!map?.getLayer("lamdong-selected")) return;
-
-    map.setFilter("lamdong-selected", ["==", ["get", "name"], name]);
-    map.setFilter("lamdong-selected-border", ["==", ["get", "name"], name]);
-  }
-
-  function clearSelected() {
-    const map = mapRef.current;
-    if (!map?.getLayer("lamdong-selected")) return;
-
-    map.setFilter("lamdong-selected", ["==", ["get", "name"], ""]);
-    map.setFilter("lamdong-selected-border", ["==", ["get", "name"], ""]);
-  }
-
   function goToInitialView() {
+    selectedRef.current = null;
+    setSelected(null);
+    setHoveredName("");
+
+    clearHover();
+    clearSelected();
+
+    window.dispatchEvent(new CustomEvent("lamdong:ward-cleared"));
+    showAllPlaceMarkers();
+
     mapRef.current?.flyTo({
       center: INITIAL_CENTER,
       zoom: INITIAL_ZOOM,
@@ -649,9 +746,8 @@ export default function LamDongMap() {
 
     clearHover();
     clearSelected();
-    clearPlaceMarkers();
+    showAllPlaceMarkers();
 
-    // BỔ SUNG: báo cho trang chủ biết đã bỏ chọn địa phương.
     window.dispatchEvent(new CustomEvent("lamdong:ward-cleared"));
   }
 
@@ -666,7 +762,7 @@ export default function LamDongMap() {
     if (!name) return;
 
     const dbWard = dbWardsRef.current.find(
-      (ward) => String(ward.code) === code
+      (ward) => String(ward.code) === code,
     );
 
     if (!dbWard) {
@@ -674,15 +770,6 @@ export default function LamDongMap() {
         geoJsonId: code,
         geoJsonName: name,
         geoJsonType: type,
-      });
-    } else {
-      console.log("✅ GHÉP ĐỊA BÀN:", {
-        geoJsonId: code,
-        geoJsonName: name,
-        supabaseId: dbWard.id,
-        supabaseCode: dbWard.code,
-        supabaseName: dbWard.name,
-        supabaseType: dbWard.type,
       });
     }
 
@@ -696,11 +783,10 @@ export default function LamDongMap() {
     selectedRef.current = selectedWard;
     setSelected(selectedWard);
 
-    // BỔ SUNG: báo cho trang chủ biết xã/phường vừa được chọn.
     window.dispatchEvent(
       new CustomEvent("lamdong:ward-selected", {
         detail: selectedWard,
-      })
+      }),
     );
 
     setHoveredName("");
@@ -772,25 +858,28 @@ export default function LamDongMap() {
         const { data: dbPlaces, error: dbPlacesError } = await supabase
           .from("places")
           .select(
-            "id,name,slug,place_type_id,ward_id,address,latitude,longitude,short_description,description,cover_image,vr360_url,audio_url,video_url,historical_period,recognition,source,is_published,sort_order"
+            "id,name,slug,place_type_id,ward_id,address,latitude,longitude,short_description,description,cover_image,vr360_url,audio_url,video_url,historical_period,recognition,source,sort_order,is_published",
           )
-          .eq("is_published", true)
           .order("sort_order", { ascending: true });
 
         if (dbPlacesError) {
           console.error("Lỗi tải places:", dbPlacesError);
         } else {
-          dbPlacesRef.current = dbPlaces ?? [];
+          dbPlacesRef.current = (dbPlaces ?? []) as DbPlace[];
           console.log("✅ Supabase places:", dbPlaces?.length);
+          console.log(
+            "📍 Địa danh đã xuất bản:",
+            dbPlaces?.filter((place) => place.is_published).length,
+          );
         }
 
-        if (cancelled) return;
+        if (cancelled || !mapEl.current) return;
 
         wardsRef.current = wardData.features;
         setWards(wardData.features);
 
         const map = new maplibregl.Map({
-          container: mapEl.current!,
+          container: mapEl.current,
           center: INITIAL_CENTER,
           zoom: INITIAL_ZOOM,
           minZoom: 6,
@@ -990,6 +1079,10 @@ export default function LamDongMap() {
         map.on("load", () => {
           console.log("LÂM ĐỒNG MAP: OK");
 
+          if (!selectedRef.current) {
+            showAllPlaceMarkers();
+          }
+
           map.on("mousemove", "lamdong-fill", (event) => {
             const feature = event.features?.[0];
             if (!feature) return;
@@ -1020,7 +1113,7 @@ export default function LamDongMap() {
             if (!name) return;
 
             const localFeature = wardsRef.current.find(
-              (ward) => String(ward.properties?.name || "") === name
+              (ward) => String(ward.properties?.name || "") === name,
             );
 
             if (localFeature) selectWard(localFeature);
@@ -1126,12 +1219,17 @@ export default function LamDongMap() {
             <List size={10} className="relative z-10 text-[#28724b]" />
           </span>
 
-          <span className="whitespace-nowrap">124 xã, phường, đặc khu</span>
+          <span className="whitespace-nowrap">
+            124 xã, phường, đặc khu
+          </span>
 
           {showList ? (
             <ChevronUp size={10} className="text-[#28724b]" />
           ) : (
-            <ChevronDown size={10} className="animate-bounce text-[#28724b]" />
+            <ChevronDown
+              size={10}
+              className="animate-bounce text-[#28724b]"
+            />
           )}
         </button>
 
@@ -1140,6 +1238,7 @@ export default function LamDongMap() {
             <div className="border-b border-[#edf1ed] p-3">
               <div className="flex items-center gap-2 rounded-xl border border-[#dfeae2] bg-[#f8fbf8] px-3">
                 <Search size={17} className="shrink-0 text-[#28724b]" />
+
                 <input
                   autoFocus
                   value={search}
@@ -1191,6 +1290,7 @@ export default function LamDongMap() {
                                 onMouseEnter={() => highlightHover(name)}
                                 onMouseLeave={() => {
                                   clearHover();
+
                                   if (selectedRef.current?.name) {
                                     highlightSelected(selectedRef.current.name);
                                   }
@@ -1211,14 +1311,17 @@ export default function LamDongMap() {
                                 <span className="truncate">{name}</span>
 
                                 {isSelected && (
-                                  <MapPin size={13} className="ml-auto shrink-0 text-[#26734a]" />
+                                  <MapPin
+                                    size={13}
+                                    className="ml-auto shrink-0 text-[#26734a]"
+                                  />
                                 )}
                               </button>
                             );
                           })}
                         </div>
                       </div>
-                    )
+                    ),
                 )
               )}
             </div>
@@ -1238,6 +1341,7 @@ export default function LamDongMap() {
               <div className="truncate text-sm font-bold text-[#1f4e34]">
                 {selected.name}
               </div>
+
               <div className="text-[11px] text-[#7d8c84]">
                 {selected.type} · Đang chọn
               </div>

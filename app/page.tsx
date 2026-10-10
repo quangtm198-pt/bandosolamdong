@@ -29,7 +29,6 @@ type PlaceRow = {
   longitude?: number | null;
   short_description?: string | null;
   cover_image?: string | null;
-  is_published: boolean;
   sort_order: number;
 };
 
@@ -61,9 +60,8 @@ export default function Home() {
         supabase
           .from("places")
           .select(
-            "id,name,slug,place_type_id,ward_id,address,latitude,longitude,short_description,cover_image,is_published,sort_order"
+            "id,name,slug,place_type_id,ward_id,address,latitude,longitude,short_description,cover_image,sort_order"
           )
-          .eq("is_published", true)
           .order("sort_order", { ascending: true }),
         supabase
           .from("place_types")
@@ -275,20 +273,21 @@ export default function Home() {
             <div className="py-4 lg:py-10">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#cce7d6] bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#087043]">
                 <span className="h-2 w-2 rounded-full bg-[#e7b600]" />
-                Bản đồ số Lâm Đồng
+                Một Lâm Đồng mới
               </div>
 
               <h1 className="text-[42px] font-black leading-[0.98] tracking-[-0.045em] text-[#0b5435] sm:text-[58px] lg:text-[66px]">
                 Chạm vào
                 <br />
                 <span className="bg-gradient-to-r from-[#087b4c] via-[#11a96d] to-[#c99b00] bg-clip-text text-transparent">
-                  Lâm Đồng.
+                  Lâm Đồng
                 </span>
               </h1>
 
               <p className="mt-5 max-w-xl text-sm leading-7 text-[#60796d] sm:text-base">
-                Khám phá địa chỉ đỏ, di tích lịch sử, văn hóa, thiên nhiên và
-                con người qua từng địa danh trên bản đồ số.
+                Một không gian số để người trẻ khám phá lịch sử, văn hóa,
+                con người, thiên nhiên và những điều tuyệt vời đang tạo nên
+                Lâm Đồng hôm nay.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -315,7 +314,7 @@ export default function Home() {
                 <div className="h-8 w-px bg-[#d8e6dc]" />
                 <HeroStat
                   value={loadingPlaces ? "…" : String(places.length)}
-                  label="địa danh đã xuất bản"
+                  label="địa danh khám phá"
                 />
               </div>
 
@@ -328,7 +327,8 @@ export default function Home() {
               <div className="relative h-[520px] overflow-hidden rounded-[26px] border-[5px] border-white bg-[#dfeee4] shadow-[0_25px_70px_rgba(24,75,48,0.18)] sm:h-[620px] lg:h-[700px]">
                 <LamDongMap />
               </div>
-              <div className="mt-2 flex items-center justify-center gap-2 text-center text-[10px] text-[#81968b]">
+              <div className="mt-1
+               flex items-center justify-center gap-2 text-center text-[10px] text-[#81968b]">
                 <MapPin size={13} />
                 Chọn một địa danh trên bản đồ để xem thông tin chi tiết bên dưới
               </div>
@@ -419,11 +419,7 @@ export default function Home() {
                   Kết quả tìm kiếm
                 </span>
                 <button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedType("");
-                    setSelectedWard("");
-                  }}
+                  onClick={resetSearch}
                   className="text-xs font-semibold text-[#087043]"
                 >
                   Xóa bộ lọc
