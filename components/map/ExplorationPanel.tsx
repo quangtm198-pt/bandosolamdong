@@ -133,30 +133,8 @@ const FILTERS: {
   subtitle: string;
   icon: typeof Landmark;
 }[] = [
-  {
-    id: "all",
-    label: "Tất cả địa danh",
-    subtitle: "Toàn bộ địa danh",
-    icon: Compass,
-  },
-  {
-    id: "history",
-    label: "Lịch sử",
-    subtitle: "Dấu ấn thời gian",
-    icon: Landmark,
-  },
-  {
-    id: "culture",
-    label: "Văn hóa",
-    subtitle: "Bản sắc địa phương",
-    icon: BookOpen,
-  },
-  {
-    id: "nature",
-    label: "Danh lam thắng cảnh",
-    subtitle: "Vẻ đẹp cảnh quan thiên nhiên",
-    icon: Trees,
-  },
+  
+  
 ];
 
 const STORY_CATEGORIES = [
@@ -310,24 +288,28 @@ function InfoSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm sm:p-5">
+    <section className="group cursor-pointer rounded-2xl border border-stone-100 bg-white p-4 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-md sm:p-5">
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 transition-colors duration-200 group-hover:bg-emerald-100 group-hover:text-emerald-700">
           <Icon size={19} strokeWidth={1.8} />
         </div>
+
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700">
             {eyebrow}
           </p>
-          <h3 className="mt-0.5 text-sm font-bold text-stone-800 sm:text-base">
+          <h3 className="mt-0.5 text-sm font-bold text-stone-800 transition-colors duration-200 group-hover:text-emerald-800 sm:text-base">
             {title}
           </h3>
         </div>
       </div>
+
       {children}
     </section>
   );
 }
+
+
 
 function Metadata({
   label,
@@ -1148,13 +1130,7 @@ export default function ExplorationPanel() {
     });
   };
 
-  const openPlaceOnMap = (place: Place) => {
-    window.dispatchEvent(
-      new CustomEvent("lamdong:place-selected", {
-        detail: place,
-      }),
-    );
-  };
+ 
 
   return (
     <div className="exploration-panel space-y-5 pb-8">
@@ -1251,7 +1227,7 @@ export default function ExplorationPanel() {
       {/* GIỚI THIỆU ĐỊA BÀN */}
       <section
         id="chi-tiet-dia-danh"
-        className="explore-enter overflow-hidden rounded-[26px] border border-emerald-900/10 bg-[#f7f5e9] shadow-[0_12px_36px_rgba(37,65,43,0.08)]"
+        className="explore-enter -mt-6 overflow-hidden rounded-[26px] border border-emerald-900/10 bg-[#f7f5e9] shadow-[0_12px_36px_rgba(37,65,43,0.08)]"
       >
         <div className="relative overflow-hidden bg-gradient-to-br from-[#173f30] via-[#205941] to-[#347452] px-5 py-6 text-white sm:px-7 sm:py-8">
           <div className="pointer-events-none absolute -right-8 -top-14 h-48 w-48 rounded-full border border-white/10" />
@@ -1272,7 +1248,7 @@ export default function ExplorationPanel() {
                 {ward?.name ?? "Khám phá vùng đất Lâm Đồng"}
               </h2>
 
-              <p className="mt-3 text-sm leading-6 text-emerald-50/85 sm:text-[15px]">
+              <p className="mt-1 whitespace-nowrap text-sm leading-6 text-emerald-50/85 sm:text-[15px]">
                 {ward?.introduction ||
                   (ward
                     ? `Khám phá các địa danh, dấu ấn lịch sử, giá trị văn hóa và cảnh quan đặc sắc tại ${ward.name}.`
@@ -1287,7 +1263,7 @@ export default function ExplorationPanel() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-emerald-100/70">
-                    Địa danh đã cập nhật
+                    Địa danh 
                   </p>
                   <p className="mt-0.5 text-lg font-bold">
                     {loading ? "…" : places.length}
@@ -1343,160 +1319,26 @@ export default function ExplorationPanel() {
         </div>
 
         {/* TRA CỨU ĐỊA DANH */}
-        <div className="relative z-20 px-3 pb-3 pt-1 sm:px-5 sm:pb-4 sm:pt-2">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="min-w-0 text-[11px] text-stone-500 sm:text-xs">
-              {ward
-                ? `Tra cứu địa danh thuộc ${ward.name}`
-                : "Chọn địa bàn trên bản đồ để bắt đầu"}
-            </p>
-
-            {ward && (
-              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-800 sm:text-xs">
-                {places.length} địa danh
-              </span>
-            )}
-          </div>
-
-          <div ref={searchRef} className="relative">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-stone-400"
-            />
-
-            <input
-              type="search"
-              value={keyword}
-              onFocus={() => setSearchOpen(true)}
-              onClick={() => setSearchOpen(true)}
-              onChange={(event) => {
-                setKeyword(event.target.value);
-                setFilter("all");
-                setSearchOpen(true);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setSearchOpen(false);
-
-                if (event.key === "Enter" && searchSuggestions.length > 0) {
-                  event.preventDefault();
-                  selectPlace(searchSuggestions[0]);
-                }
-              }}
-              placeholder={
-                ward
-                  ? "Nhập tên hoặc địa chỉ để tìm nhanh..."
-                  : "Chọn xã/phường trên bản đồ trước"
-              }
-              aria-label="Tra cứu địa danh"
-              aria-expanded={searchOpen}
-              className="h-10 w-full rounded-lg border border-stone-200 bg-white pl-9 pr-9 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-700/10 sm:rounded-xl"
-            />
-
-            {keyword && (
-              <button
-                type="button"
-                onClick={() => {
-                  setKeyword("");
-                  setSearchOpen(true);
-                }}
-                aria-label="Xóa từ khóa tìm kiếm"
-                className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-              >
-                <X size={14} />
-              </button>
-            )}
-
-            {searchOpen && ward && (
-              <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_18px_45px_rgba(30,50,35,0.16)]">
-                <div className="flex items-center justify-between border-b border-stone-100 bg-stone-50/80 px-4 py-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-stone-500">
-                    {keyword.trim() ? "Kết quả phù hợp" : "Danh sách địa danh"}
-                  </span>
-                  <span className="text-[10px] text-stone-400">
-                    {loading
-                      ? "Đang tải..."
-                      : `${searchSuggestions.length} / ${places.length} địa danh`}
-                  </span>
-                </div>
-
-                <div className="max-h-72 overflow-y-auto overscroll-contain p-1.5">
-                  {loading ? (
-                    <p className="px-3 py-5 text-center text-sm text-stone-500">
-                      Đang tải danh sách địa danh...
-                    </p>
-                  ) : searchSuggestions.length > 0 ? (
-                    searchSuggestions.map((place) => (
-                      <button
-                        key={place.id}
-                        type="button"
-                        onClick={() => selectPlace(place)}
-                        className="group flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-emerald-50"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-50 text-emerald-800">
-                          {place.cover_image ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={place.cover_image}
-                              alt=""
-                              loading="lazy"
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <MapPin size={18} />
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-stone-800 group-hover:text-emerald-800">
-                            {place.name}
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-stone-500">
-                            {getTypeName(place, placeTypes)}
-                            {place.address ? ` · ${place.address}` : ""}
-                          </p>
-                        </div>
-
-                        <ArrowRight
-                          size={15}
-                          className="shrink-0 text-stone-400 group-hover:text-emerald-700"
-                        />
-                      </button>
-                    ))
-                  ) : (
-                    <p className="px-3 py-5 text-center text-sm text-stone-500">
-                      Không tìm thấy địa danh phù hợp.
-                    </p>
-                  )}
-                </div>
-
-                {!loading && searchSuggestions.length > 0 && (
-                  <div className="border-t border-stone-100 bg-stone-50 px-3 py-2 text-center text-[10px] text-stone-400">
-                    Chọn địa danh để xem hồ sơ chi tiết
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+       
       </section>
 
       {/* ĐỊA DANH TIÊU BIỂU: KHÔNG LỌC THEO TỪ KHÓA/CHỦ ĐỀ */}
       <section
         id="danh-sach-dia-danh"
-        className="explore-enter rounded-[26px] border border-stone-200/80 bg-[#fcfbf7] p-4 shadow-sm sm:p-5"
+        className="explore-enter -mt-9 rounded-b-[26px] rounded-t-none border border-stone-200/80 bg-[#fcfbf7] p-4 shadow-sm sm:p-5"
       >
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="-mt-1 mb-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.17em] text-amber-700">
+            <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.17em] text-amber-700">
               <span className="h-px w-6 bg-amber-600/70" />
               Hành trình khám phá
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-[#244a36] sm:text-2xl">
+            <h2 className="text-lg font-bold tracking-normal text-[#244a36] sm:text-xl">
               Địa danh tiêu biểu
             </h2>
-            <p className="mt-1.5 text-sm leading-6 text-stone-500">
+            <p className="mt-1 text-sm leading-6 text-stone-500">
               {ward
-                ? `Các địa danh đã xuất bản của ${ward.name}. Vuốt hoặc kéo ngang để xem thêm.`
+                ? `Khám phá các địa danh đặc sắc của ${ward.name}. Vuốt hoặc kéo ngang để xem thêm.`
                 : "Chọn xã, phường hoặc đặc khu trên bản đồ để xem danh sách địa danh."}
             </p>
           </div>
@@ -1601,16 +1443,15 @@ export default function ExplorationPanel() {
       {ward && (
         <section className="space-y-3">
           <div className="px-4 sm:px-6">
-            <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.17em] text-amber-700">
+            <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.10em] text-amber-700">
               <span className="h-px w-6 bg-amber-600/70" />
               Khám phá theo chủ đề
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-[#244a36] sm:text-2xl">
+            <h2 className="text-lg font-bold tracking-normal text-[#244a36] sm:text-xl">
               Những câu chuyện của {ward.name}
             </h2>
             <p className="mt-1 text-sm leading-6 text-stone-500">
-              Những câu chuyện được biên soạn và xuất bản riêng cho địa bàn,
-              không lấy từ danh sách địa danh.
+            Khám phá những giá trị văn hóa, dấu ấn lịch sử và nét đẹp riêng của vùng đất và con người Phan Thiết.
             </p>
           </div>
 
@@ -1666,7 +1507,7 @@ export default function ExplorationPanel() {
         >
           <div className="flex flex-col gap-3 border-b border-stone-200/70 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
-              <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.17em] text-amber-700">
+              <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.10em] text-amber-700">
                 <span className="h-px w-6 bg-amber-600/70" />
                 Hồ sơ địa danh
               </div>
@@ -1680,16 +1521,16 @@ export default function ExplorationPanel() {
             </div>
 
             <button
-              type="button"
-              onClick={() => setDetailExpanded((current) => !current)}
-              className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-stone-700 hover:border-emerald-200 hover:text-emerald-800 sm:self-auto"
-            >
-              {detailExpanded ? "Thu gọn hồ sơ" : "Mở hồ sơ"}
-              <ArrowDown
-                size={15}
-                className={`transition-transform ${detailExpanded ? "rotate-180" : ""}`}
-              />
-            </button>
+  type="button"
+  onClick={() => setDetailExpanded((current) => !current)}
+  className="inline-flex cursor-pointer items-center justify-center gap-2 self-start rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-stone-700 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 sm:self-auto"
+>
+  {detailExpanded ? "Thu gọn hồ sơ" : "Mở hồ sơ"}
+  <ArrowDown
+    size={15}
+    className={`transition-transform ${detailExpanded ? "rotate-180" : ""}`}
+  />
+</button>
           </div>
 
           {detailExpanded && (
@@ -1735,37 +1576,70 @@ export default function ExplorationPanel() {
                       />
                     </div>
 
-                    <div className="flex flex-wrap gap-2 border-t border-stone-100 p-4">
-                      {directionsUrl ? (
-                        <a
-                          href={
-                            (activePlace as MapPlace).googleMapsUrl ||
-                            directionsUrl
-                          }
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-700"
-                        >
-                          <Compass size={15} />
-                          Chỉ đường đến đây
-                          <ExternalLink size={13} />
-                        </a>
-                      ) : (
-                        <span className="inline-flex items-center gap-2 rounded-xl bg-stone-100 px-3.5 py-2.5 text-xs text-stone-500">
-                          <MapPin size={15} />
-                          Chưa cập nhật vị trí
-                        </span>
-                      )}
+                    <div className="flex flex-wrap items-center justify-center gap-2 border-t border-stone-100 p-2">
+  {directionsUrl ? (
+    <a
+      href={
+        (activePlace as MapPlace).googleMapsUrl ||
+        directionsUrl
+      }
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-[11px] font-semibold leading-none text-white transition-colors hover:bg-emerald-700"
+    >
+      <Compass size={13} />
+      <span>Chỉ đường đến đây</span>
+      <ExternalLink size={11} />
+    </a>
+  ) : (
+    <span className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-stone-100 px-3 text-[11px] font-medium leading-none text-stone-500">
+      <MapPin size={13} />
+      <span>Chưa cập nhật vị trí</span>
+    </span>
+  )}
 
-                      <button
-                        type="button"
-                        onClick={() => openPlaceOnMap(activePlace)}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100"
-                      >
-                        <MapPin size={15} />
-                        Xem trên bản đồ
-                      </button>
-                    </div>
+  {activePlace.vr360_url ? (
+    <a
+      href={activePlace.vr360_url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-[11px] font-semibold leading-none text-white transition-colors hover:bg-emerald-700"
+    >
+      <Rotate3D size={13} />
+      <span>Trải nghiệm VR360</span>
+      <ExternalLink size={11} />
+    </a>
+  ) : (
+    <button
+      type="button"
+      disabled
+      title="Địa danh chưa có đường dẫn VR360"
+      className="inline-flex h-9 shrink-0 cursor-not-allowed items-center justify-center gap-1.5 rounded-lg border border-stone-200 bg-stone-100 px-3 text-[11px] font-semibold leading-none text-stone-500"
+    >
+      <Rotate3D size={13} />
+      <span>Trải nghiệm VR360</span>
+    </button>
+    
+  )}
+   <button
+  type="button"
+  onClick={() => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }}
+  title="Quay lại bản đồ"
+  aria-label="Quay lại bản đồ"
+  className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-900 transition-colors hover:bg-emerald-100"
+>
+  <MapPin size={15} />
+</button>
+
+
+</div>
+
+
                   </div>
                 </div>
 
@@ -1775,7 +1649,7 @@ export default function ExplorationPanel() {
                     eyebrow="Giới thiệu"
                     title="Giới thiệu địa danh"
                   >
-                    <p className="whitespace-pre-line text-sm leading-7 text-stone-600">
+                    <p className="whitespace-pre-line text-sm leading-6 text-justify text-stone-600">
                       {activePlace.description ||
                         activePlace.short_description ||
                         "Chưa cập nhật thông tin giới thiệu địa danh."}
@@ -1787,21 +1661,21 @@ export default function ExplorationPanel() {
                     eyebrow="Dấu ấn thời gian"
                     title="Lịch sử và giá trị"
                   >
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div>
-                        <p className="mb-1.5 text-xs font-bold text-stone-700">
+                        <p className="mb-1 text-xs font-bold text-stone-700">
                           Thời kỳ lịch sử
                         </p>
-                        <p className="rounded-xl bg-stone-50 px-3.5 py-3 text-sm leading-6 text-stone-600">
+                        <p className="rounded-xl bg-stone-50 px-3.5 py-2 text-sm leading-6 text-stone-600">
                           {activePlace.historical_period ||
                             "Chưa cập nhật thông tin"}
                         </p>
                       </div>
                       <div>
-                        <p className="mb-1.5 text-xs font-bold text-stone-700">
+                        <p className="mb-1.5 text-xs font-bold text-justify text-stone-700">
                           Giá trị, danh hiệu và xếp hạng
                         </p>
-                        <p className="rounded-xl bg-stone-50 px-3.5 py-3 text-sm leading-6 text-stone-600">
+                        <p className="rounded-xl bg-stone-50 px-3.5 py-2 text-sm leading-5 text-justify text-stone-600">
                           {activePlace.recognition ||
                             "Chưa cập nhật thông tin"}
                         </p>
@@ -1814,57 +1688,13 @@ export default function ExplorationPanel() {
                     eyebrow="Bản sắc địa phương"
                     title="Văn hóa và câu chuyện"
                   >
-                    <p className="whitespace-pre-line text-sm leading-7 text-stone-600">
+                    <p className="whitespace-pre-line text-sm leading-6 text-justify text-stone-600">
                       {activePlace.short_description ||
                         "Chưa cập nhật thông tin về văn hóa và câu chuyện gắn với địa danh."}
                     </p>
                   </InfoSection>
 
-                  <InfoSection
-                    icon={Compass}
-                    eyebrow="Trải nghiệm số"
-                    title="Khám phá và trải nghiệm"
-                  >
-                    <div className="grid gap-2.5 sm:grid-cols-2">
-                      <MediaLink
-                        href={activePlace.vr360_url}
-                        icon={Rotate3D}
-                        title="Không gian VR360"
-                        description="Khám phá không gian thực tế ảo"
-                      />
-                      <MediaLink
-                        href={activePlace.audio_url}
-                        icon={Headphones}
-                        title="Nghe câu chuyện"
-                        description="Trải nghiệm nội dung âm thanh"
-                      />
-                      <MediaLink
-                        href={activePlace.video_url}
-                        icon={Play}
-                        title="Video tư liệu"
-                        description="Xem hình ảnh và tư liệu"
-                      />
-                    </div>
-                  </InfoSection>
-
-                  <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-[#f7f0dc] to-[#fbf8ed] p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-amber-800 shadow-sm">
-                        <BookOpen size={19} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-[#6d5424]">
-                          Giáo dục truyền thống
-                        </h3>
-                        <p className="mt-1.5 text-sm leading-6 text-stone-600">
-                          Mỗi địa danh là một điểm kết nối với lịch sử, văn hóa
-                          và con người địa phương; góp phần bồi đắp tình yêu
-                          quê hương, niềm tự hào và trách nhiệm gìn giữ các giá
-                          trị di sản.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                
 
                   {activePlace.source && (
                     <p className="text-xs leading-5 text-stone-500">

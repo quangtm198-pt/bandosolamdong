@@ -217,16 +217,14 @@ export default function LamDongMap() {
     );
   }
 
+ 
   function openPlaceDetail(place: MapPlace) {
+    // Chỉ mở hồ sơ khi người dùng nhấp "Xem chi tiết".
+    // Component hồ sơ tự xử lý việc cuộn trang.
     notifyPlaceSelected(place);
-
-    window.setTimeout(() => {
-      document.getElementById("chi-tiet-dia-danh")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
   }
+
+
 
   function convertDbPlace(place: DbPlace): MapPlace | null {
     if (
@@ -441,13 +439,11 @@ export default function LamDongMap() {
       const map = mapRef.current;
       if (!map) return;
 
-      // MỚI: tô sáng địa bàn chứa địa danh được nhấp.
+      // Tô sáng địa bàn chứa địa danh.
+      // Không mở hồ sơ khi chỉ nhấp marker.
       selectWardFromPlace(place);
-
-      // MỚI: đồng bộ địa danh được chọn với phần nội dung bên dưới.
-      // Không tự cuộn trang để người dùng vẫn nhìn thấy bản đồ và popup.
-      notifyPlaceSelected(place);
       setActivePlace(place);
+
 
       map.flyTo({
         center: [place.lng, place.lat],
